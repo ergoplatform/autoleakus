@@ -11,9 +11,15 @@ package object autoleakus {
   type SecretsSum = BigInt
 
   val group: BcDlogFp[EcPointType] = CryptoConstants.dlogGroup
-  val q = group.q
+  val q: BigInt = group.q
+
+  val hashFn: NumericHash = new NumericHash(q)
+
+  def hash(in: Array[Byte]): BigInt = hashFn.hash(in)
 
   def genPk(s: PrivateKey): ECPoint = group.exponentiate(group.generator, s.bigInteger)
-  val hash: NumericHash = new NumericHash(q)
+
+  def randomNumber: PrivateKey = hash(scorex.utils.Random.randomBytes(32))
+
 
 }
