@@ -25,7 +25,7 @@ case class WagnerAlg(k: Int, N: Int) extends ScorexLogging {
     }.toMap
 
     val lists: Seq[Seq[(BigInt, Seq[Int])]] = (0 until k).map { l =>
-      log(s"Generating list $l of $k with $N elements")
+      log(s"Generating list ${l + 1} of $k with $N elements")
       (0 until N).map { i =>
         (elementGen(l, i) + randByEll(l)).mod(q) -> Seq(i)
       }
@@ -73,6 +73,7 @@ case class WagnerAlg(k: Int, N: Int) extends ScorexLogging {
     } else {
       val round = lgK - lg(lists.size) + 1
       val nextLev = (0 until lists.size by 2).map { i =>
+        log(s"prepare lists $i,${i + 1} for round $round")
         val list = (lists(i).map(l => ((-l._1).mod(q), l._2, true)) ++
           lists(i + 1).map(l => (l._1, l._2, false)))
           .sortBy(_._1)
