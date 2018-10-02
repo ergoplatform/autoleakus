@@ -10,16 +10,17 @@ class AutoleakusSpecification extends PropSpec with PropertyChecks with TableDri
   val N: Int = 10000
   val k: Int = 4
   val b: BigInt = q / BigInt("1000000000000")
-  val prover = WagnerAlg(k, N)
 
   property("Sum to interval") {
+    val wagner = WagnerAlg(k, N)
+
     forAll { m: Array[Byte] =>
       def elementGen(l: Int, i: Int): BigInt = {
         assert(l < k)
         hash(m ++ Ints.toByteArray(l) ++ Ints.toByteArray(i)).mod(q)
       }
 
-      prover.prove(elementGen, b).foreach { s =>
+      wagner.solve(elementGen, b).foreach { s =>
         val sum: BigInt = s.indices.zipWithIndex.map(li => elementGen(li._2, li._1)).sum.mod(q)
         require(sum <= b || sum >= q - b, s"Incorrect sum $sum <= $b || $sum >= ${q - b} | ${s.indices} | ${s.indices.zipWithIndex.map(li => elementGen(li._2, li._1))}")
       }

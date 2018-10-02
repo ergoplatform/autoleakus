@@ -8,7 +8,7 @@ import scala.util.Try
 class Autoleakus(k: Int, N: Int, sk: BigInt) {
 
   val pk: ECPoint = genPk(sk)
-  private val prover: WagnerAlg = WagnerAlg(k, N)
+  private val kSumSolver: WagnerAlg = WagnerAlg(k, N)
 
   def prove(m: Array[Byte], b: BigInt): Seq[PublicSolution] = {
     val randSk = randomNumber
@@ -20,7 +20,7 @@ class Autoleakus(k: Int, N: Int, sk: BigInt) {
       h(m, pk, randPk, l, i, 0) + randSk * h(m, pk, randPk, l, i, 1) + sk1Shift
     }.mod(q)
 
-    prover.prove(elementGen, b).map { ps =>
+    kSumSolver.solve(elementGen, b).map { ps =>
       val J = ps.indices
       val d = J.zipWithIndex.map { il =>
         elementGen(il._2, il._1)
