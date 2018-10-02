@@ -7,9 +7,9 @@ import org.scalatest.{Matchers, PropSpec}
 
 class AutoleakusSpecification extends PropSpec with PropertyChecks with TableDrivenPropertyChecks with Matchers {
 
-  val N: Int = 50
+  val N: Int = 10000
   val k: Int = 4
-  val b: BigInt = q / BigInt("100000")
+  val b: BigInt = q / BigInt("1000000000000")
   val prover = WagnerAlg(k, N)
 
   property("Sum to interval") {
@@ -19,8 +19,7 @@ class AutoleakusSpecification extends PropSpec with PropertyChecks with TableDri
         hash(m ++ Ints.toByteArray(l) ++ Ints.toByteArray(i)).mod(q)
       }
 
-      val sols = prover.prove(elementGen, b)
-      sols.foreach { s =>
+      prover.prove(elementGen, b).foreach { s =>
         val sum: BigInt = s.indices.zipWithIndex.map(li => elementGen(li._2, li._1)).sum.mod(q)
         require(sum <= b || sum >= q - b, s"Incorrect sum $sum <= $b || $sum >= ${q - b} | ${s.indices} | ${s.indices.zipWithIndex.map(li => elementGen(li._2, li._1))}")
       }
@@ -33,9 +32,7 @@ class AutoleakusSpecification extends PropSpec with PropertyChecks with TableDri
         val sk = sk0.mod(q)
         val alg = new Autoleakus(k, N, sk)
         val sols = alg.prove(m, b)
-        println(s"${sols.length} solutions")
         sols.foreach { s =>
-          alg.verify(s, b).get
           alg.verify(s, b) shouldBe 'success
         }
       }

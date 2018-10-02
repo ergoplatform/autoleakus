@@ -12,6 +12,7 @@ case class WagnerAlg(k: Int, N: Int) extends ScorexLogging {
   val lgK: Int = lg(k)
 
   def prove(elementGen: (Int, Int) => BigInt, b: BigInt): Seq[PrivateSolution] = {
+    log(s"Generating $k lists of $N elements")
     val h = calcH(b)
     val randoms: Map[Int, BigInt] = (0 until lgK).map(k => k -> randomNumber).toMap
     val randByEll: Map[Int, BigInt] = (0 until k).map { l =>
@@ -24,32 +25,60 @@ case class WagnerAlg(k: Int, N: Int) extends ScorexLogging {
       }.sum.mod(q)
     }.toMap
 
-    val lists: Seq[Seq[(BigInt, Seq[Int])]] = (0 until k).map(l => (0 until N).map { i =>
-      (elementGen(l, i) + randByEll(l)).mod(q) -> Seq(i)
-    }.sortBy(_._1))
-
-    def join(list1: Seq[(BigInt, Seq[Int])], list2: Seq[(BigInt, Seq[Int])], round: Int): Seq[(BigInt, Seq[Int])] = {
-      val (atMost, atLeast) = calcInterval(round, h, b)
-      log(s"Round $round: search sums 0-$atMost || $atLeast-$q from ${list1.size}|${list2.size} elements")
-      val resp: ArrayBuffer[(BigInt, Seq[Int])] = ArrayBuffer[(BigInt, Seq[Int])]()
-      // todo make efficient
-      list1.foreach { x =>
-        list2.foreach { y =>
-          val sum = (x._1 + y._1).mod(q)
-          if (sum >= atLeast || sum <= atMost) {
-            resp += sum -> (x._2 ++ y._2)
-          }
-        }
+    val lists: Seq[Seq[(BigInt, Seq[Int])]] = (0 until k).map { l =>
+      (0 until N).map { i =>
+        (elementGen(l, i) + randByEll(l)).mod(q) -> Seq(i)
       }
+    }
+
+
+    def join(list: Seq[(BigInt, Seq[Int], Boolean)], round: Int): Seq[(BigInt, Seq[Int])] = {
+      val size = list.size
+      val (atMost, atLeast) = calcInterval(round, h, b)
+      log(s"Round $round: search sums 0-$atMost || $atLeast-$q from $size elements")
+      val resp: ArrayBuffer[(BigInt, Seq[Int])] = ArrayBuffer[(BigInt, Seq[Int])]()
+
+      list.indices.foreach { i =>
+        val x = list(i)
+
+        def increment(a: Int): Int = (a + 1) % size
+
+        var j: Int = increment(i)
+        var continue: Boolean = true
+
+        do {
+          val y = list(j)
+          if (x._3 ^ y._3) {
+            val xVal = if (x._3) -x._1 else x._1
+            val yVal = if (y._3) -y._1 else y._1
+            val sum = (xVal + yVal).mod(q)
+            if (sum <= atMost || sum >= atLeast) {
+              val indices = if (x._3) x._2 ++ y._2 else y._2 ++ x._2
+              resp += sum -> indices
+            } else {
+              continue = false
+            }
+          }
+          j = increment(j)
+        } while (continue)
+      }
+
       resp
     }
 
     @tailrec
     def loop(lists: Seq[Seq[(BigInt, Seq[Int])]]): Seq[(BigInt, Seq[Int])] = if (lists.length == 1) {
+      log(s"${lists.head.size} solutions found")
       lists.head
     } else {
       val round = lgK - lg(lists.size) + 1
-      val nextLev = lists.grouped(2).map(l => join(l.head, l.last, round)).toSeq
+      val nextLev = (0 until lists.size by 2).map { i =>
+        val list = (lists(i).map(l => ((-l._1).mod(q), l._2, true)) ++
+          lists(i + 1).map(l => (l._1, l._2, false)))
+          .sortBy(_._1)
+
+        join(list, round)
+      }
       loop(nextLev)
     }
 
@@ -74,4 +103,5 @@ case class WagnerAlg(k: Int, N: Int) extends ScorexLogging {
 
   def lg(x: Int): Int = (Math.log(x) / Math.log(2)).toInt
     .ensuring(s => Math.pow(2, s) == x)
+
 }
