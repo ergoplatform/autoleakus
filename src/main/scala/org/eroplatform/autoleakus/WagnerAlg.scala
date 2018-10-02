@@ -5,15 +5,19 @@ import scorex.util.ScorexLogging
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 
+/**
+  * k-SUM solver via Wagners algorithm.
+  */
 case class WagnerAlg(k: Int, N: Int) extends ScorexLogging {
 
-  val halfP: BigInt = q / 2
-  val n: Int = bitLength(q)
-  val lgK: Int = lg(k)
+  assert((k & (k - 1)) == 0, s"k should be a power of 2, $k given")
 
-  def solve(elementGen: (Int, Int) => BigInt, b: BigInt): Seq[PrivateSolution] = {
-    val h = calcH(b)
-    val randoms: Map[Int, BigInt] = (0 until lgK).map(k => k -> randomNumber).toMap
+  private val n: Int = bitLength(q)
+  private val lgK: Int = lg(k)
+
+  def solve(elementGen: (Int, Int) => BigInt, b: BigInt): Seq[Seq[Int]] = {
+    val h = bitLength(q) - bitLength(b)
+    val randoms: Map[Int, BigInt] = (0 until lgK).map(k => k -> randomNumber()).toMap
     val randByEll: Map[Int, BigInt] = (0 until k).map { l =>
       l -> (0 until lgK).map { i =>
         if (((l >> i) & 1) == 1) {
@@ -83,7 +87,7 @@ case class WagnerAlg(k: Int, N: Int) extends ScorexLogging {
       loop(nextLev)
     }
 
-    loop(lists).map(l => PrivateSolution(l._2))
+    loop(lists).map(_._2)
   }
 
   private def log(str: String): Unit = logger.debug(str)
@@ -93,16 +97,14 @@ case class WagnerAlg(k: Int, N: Int) extends ScorexLogging {
     bi.bigInteger.bitLength()
   }
 
-  def calcH(finalH: BigInt): Int = bitLength(q) - bitLength(finalH)
-
-  def calcInterval(round: Int, h: Int, b: BigInt): (BigInt, BigInt) = {
+  private def calcInterval(round: Int, h: Int, b: BigInt): (BigInt, BigInt) = {
     val atMost: BigInt = if (round != lgK) BigInt(2).pow(n - round * (h / (lgK + 1))) else b
     val atLeast: BigInt = q - atMost
     assert(atLeast > atMost, s"Incorrect $atLeast > $atMost")
     (atMost, atLeast)
   }
 
-  def lg(x: Int): Int = (Math.log(x) / Math.log(2)).toInt
+  private def lg(x: Int): Int = (Math.log(x) / Math.log(2)).toInt
     .ensuring(s => Math.pow(2, s) == x)
 
 }

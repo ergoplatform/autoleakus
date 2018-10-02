@@ -20,9 +20,9 @@ class AutoleakusSpecification extends PropSpec with PropertyChecks with TableDri
         hash(m ++ Ints.toByteArray(l) ++ Ints.toByteArray(i)).mod(q)
       }
 
-      wagner.solve(elementGen, b).foreach { s =>
-        val sum: BigInt = s.indices.zipWithIndex.map(li => elementGen(li._2, li._1)).sum.mod(q)
-        require(sum <= b || sum >= q - b, s"Incorrect sum $sum <= $b || $sum >= ${q - b} | ${s.indices} | ${s.indices.zipWithIndex.map(li => elementGen(li._2, li._1))}")
+      wagner.solve(elementGen, b).foreach { J =>
+        val sum: BigInt = J.zipWithIndex.map(li => elementGen(li._2, li._1)).sum.mod(q)
+        require(sum <= b || sum >= q - b, s"Incorrect sum $sum <= $b || $sum >= ${q - b} | ${J.indices} | ${J.indices.zipWithIndex.map(li => elementGen(li._2, li._1))}")
       }
     }
   }
@@ -31,8 +31,8 @@ class AutoleakusSpecification extends PropSpec with PropertyChecks with TableDri
     forAll { (sk0: BigInt, m: Array[Byte]) =>
       whenever(sk0 > 0) {
         val sk = sk0.mod(q)
-        val alg = new Autoleakus(k, N, sk)
-        val sols = alg.prove(m, b)
+        val alg = new Autoleakus(k, N)
+        val sols = alg.prove(m, b, sk)
         sols.foreach { s =>
           alg.verify(s, b) shouldBe 'success
         }

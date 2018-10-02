@@ -19,7 +19,7 @@ package object autoleakus {
 
   def genPk(s: PrivateKey): ECPoint = group.exponentiate(group.generator, s.bigInteger)
 
-  def randomNumber: PrivateKey = hash(scorex.utils.Random.randomBytes(32))
+  def randomNumber(): PrivateKey = hash(scorex.utils.Random.randomBytes(32))
 
 
 }
