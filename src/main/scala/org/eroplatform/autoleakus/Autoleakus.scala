@@ -1,6 +1,6 @@
 package org.eroplatform.autoleakus
 
-import com.google.common.primitives.Ints
+import com.google.common.primitives.{Bytes, Ints}
 import org.bouncycastle.math.ec.ECPoint
 
 import scala.util.Try
@@ -13,11 +13,13 @@ class Autoleakus(k: Int, N: Int, sk: BigInt) {
   def prove(m: Array[Byte], b: BigInt): Seq[PublicSolution] = {
     val randSk = randomNumber
     val randPk = genPk(randSk)
+    val pkBytes = pkToBytes(pk)
+    val randPkBytes = pkToBytes(randPk)
 
     def elementGen(l: Int, i: Int): BigInt = {
       assert(l <= k, s"incorrect params $l, $i")
       val sk1Shift: BigInt = if (l == 0) -sk else 0
-      h(m, pk, randPk, l, i, 0) + randSk * h(m, pk, randPk, l, i, 1) + sk1Shift
+      h(m, pkBytes, randPkBytes, l, i, 0) + randSk * h(m, pkBytes, randPkBytes, l, i, 1) + sk1Shift
     }.mod(q)
 
     kSumSolver.solve(elementGen, b).map { ps =>
@@ -39,17 +41,18 @@ class Autoleakus(k: Int, N: Int, sk: BigInt) {
     require(s.pk.getCurve == group.curve, "pk is not on curve")
     require(s.randPk.getCurve == group.curve, "randPk is not on curve")
     val indexByLevel = s.J.zipWithIndex.map(_.swap).toMap
-    val gSum = ((0 until k).map(l => h(s.m, s.pk, s.randPk, l, indexByLevel(l), 0)).sum - s.d).mod(q)
-    val pkSum = (0 until k).map(l => h(s.m, s.pk, s.randPk, l, indexByLevel(l), 1)).sum.mod(q)
+    val pkBytes = pkToBytes(s.pk)
+    val randPkBytes = pkToBytes(s.randPk)
+    val gSum = ((0 until k).map(l => h(s.m, pkBytes, randPkBytes, l, indexByLevel(l), 0)).sum - s.d).mod(q)
+    val pkSum = (0 until k).map(l => h(s.m, pkBytes, randPkBytes, l, indexByLevel(l), 1)).sum.mod(q)
     val gExp = group.exponentiate(group.generator, gSum.bigInteger)
     val pkExp = s.randPk.multiply(pkSum.bigInteger)
     require(gExp.add(pkExp) == pk, "Incorrect points")
   }
 
-  private def h(m: Array[Byte], p1: ECPoint, p2: ECPoint, l: Int, i: Int, orderByte: Byte) = {
+  private def h(m: Array[Byte], p1: Array[Byte], p2: Array[Byte], l: Int, i: Int, orderByte: Byte) = {
     assert(l <= k)
-    hash(m ++ pkToBytes(p1) ++ pkToBytes(p2) ++
-      Ints.toByteArray(i) ++ Ints.toByteArray(l) ++ Array(orderByte))
+    hash(Bytes.concat(m, p1, p2, Ints.toByteArray(i), Ints.toByteArray(l), Array(orderByte)))
   }
 
   private def pkToBytes(pk: ECPoint): Array[Byte] = pk.getEncoded(true)

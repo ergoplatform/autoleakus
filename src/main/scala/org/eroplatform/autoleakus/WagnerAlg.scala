@@ -12,7 +12,6 @@ case class WagnerAlg(k: Int, N: Int) extends ScorexLogging {
   val lgK: Int = lg(k)
 
   def solve(elementGen: (Int, Int) => BigInt, b: BigInt): Seq[PrivateSolution] = {
-    log(s"Generating $k lists of $N elements")
     val h = calcH(b)
     val randoms: Map[Int, BigInt] = (0 until lgK).map(k => k -> randomNumber).toMap
     val randByEll: Map[Int, BigInt] = (0 until k).map { l =>
@@ -26,6 +25,7 @@ case class WagnerAlg(k: Int, N: Int) extends ScorexLogging {
     }.toMap
 
     val lists: Seq[Seq[(BigInt, Seq[Int])]] = (0 until k).map { l =>
+      log(s"Generating list $l of $k with $N elements")
       (0 until N).map { i =>
         (elementGen(l, i) + randByEll(l)).mod(q) -> Seq(i)
       }
