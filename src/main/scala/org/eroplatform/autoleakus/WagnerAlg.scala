@@ -64,6 +64,7 @@ case class WagnerAlg(k: Int, N: Int) extends ScorexLogging {
             }
           }
           j = increment(j)
+          if (i == j) continue = false
         } while (continue)
       }
 
