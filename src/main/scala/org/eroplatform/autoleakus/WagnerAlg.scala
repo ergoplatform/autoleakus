@@ -13,11 +13,10 @@ case class WagnerAlg(k: Int, N: Int) extends ScorexLogging {
 
   def prove(elementGen: (Int, Int) => BigInt, b: BigInt): Seq[PrivateSolution] = {
     val h = calcH(b)
-// todo add random here like: val randoms: Map[Int, BigInt] = (0 until lgK).map(k => k -> randomNumber).toMap
-    val randoms: Map[Int, BigInt] = (0 until lgK).map(k => k -> BigInt(0)).toMap
+    val randoms: Map[Int, BigInt] = (0 until lgK).map(k => k -> randomNumber).toMap
     val randByEll: Map[Int, BigInt] = (0 until k).map { l =>
       l -> (0 until lgK).map { i =>
-        if (((i >> l) & 1) == 0) {
+        if (((l >> i) & 1) == 1) {
           randoms(i)
         } else {
           -randoms(i)
@@ -34,8 +33,8 @@ case class WagnerAlg(k: Int, N: Int) extends ScorexLogging {
       log(s"Round $round: search sums 0-$atMost || $atLeast-$q from ${list1.size}|${list2.size} elements")
       val resp: ArrayBuffer[(BigInt, Seq[Int])] = ArrayBuffer[(BigInt, Seq[Int])]()
       // todo make efficient
-      list1.foreach{ x =>
-        list2.foreach{ y =>
+      list1.foreach { x =>
+        list2.foreach { y =>
           val sum = (x._1 + y._1).mod(q)
           if (sum >= atLeast || sum <= atMost) {
             resp += sum -> (x._2 ++ y._2)
@@ -73,6 +72,6 @@ case class WagnerAlg(k: Int, N: Int) extends ScorexLogging {
     (atMost, atLeast)
   }
 
-  def lg(x: Int):Int = (Math.log(x) / Math.log(2)).toInt
-    .ensuring(s => Math.pow(2,s) == x)
+  def lg(x: Int): Int = (Math.log(x) / Math.log(2)).toInt
+    .ensuring(s => Math.pow(2, s) == x)
 }
