@@ -11,7 +11,7 @@ class AutoleakusSpecification extends PropSpec with PropertyChecks with TableDri
 
   property("Sum to interval") {
     forAll(Arbitrary.arbitrary[Array[Byte]], kGen) { (m: Array[Byte], k: Int) =>
-      val wagner = WagnerAlg(k, NFromK(k))
+      val wagner = WagnerAlg(k, NFromKandB(k, b))
 
       def elementGen(l: Int, i: Int): BigInt = {
         assert(l < k)
@@ -28,7 +28,7 @@ class AutoleakusSpecification extends PropSpec with PropertyChecks with TableDri
   property("Autoleakus should generate valid solutions") {
     forAll(Arbitrary.arbitrary[Array[Byte]], kGen) { (m: Array[Byte], k: Int) =>
       val sk = hash(m)
-      val alg = new Autoleakus(k, NFromK(k))
+      val alg = new Autoleakus(k, NFromKandB(k, b))
       val sols = alg.prove(m, b, sk)
       sols.take(100).foreach { s =>
         alg.verify(s, b) shouldBe 'success
@@ -39,11 +39,13 @@ class AutoleakusSpecification extends PropSpec with PropertyChecks with TableDri
 
   def kGen: Gen[Int] = Gen.choose(2, 5).map(p => BigInt(2).pow(p).toInt)
 
-  def NFromK(k: Int): Int = k match {
-    case 4 => 10000
-    case 8 => 1000
-    case 16 => 200
-    case 32 => 40
+  def NFromKandB(k: Int, b: BigInt): Int = {
+    val n = q.bigInteger.bitLength() - b.bigInteger.bitLength()
+    BigInt(2).pow(n / (1 + lg(k))).toInt * 40 / 64
   }
+
+
+  private def lg(x: Int): Int = (Math.log(x) / Math.log(2)).toInt
+    .ensuring(s => Math.pow(2, s) == x)
 
 }

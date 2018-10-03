@@ -3,7 +3,9 @@ package org.ergoplatform.autoleakus
 import scorex.util.ScorexLogging
 
 import scala.annotation.tailrec
+import scala.collection.GenSeq
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.parallel.immutable.ParSeq
 
 /**
   * k-SUM solver via Wagners algorithm.
@@ -28,12 +30,13 @@ case class WagnerAlg(k: Int, N: Int) extends ScorexLogging {
       }.sum.mod(q)
     }.toMap
 
-    val lists: Seq[Seq[(BigInt, Seq[Int])]] = (0 until k).map { l =>
+    val lists: ParSeq[Seq[(BigInt, Seq[Int])]] = (0 until k).par.map { l =>
       log(s"Generating list ${l + 1} of $k with $N elements")
       (0 until N).map { i =>
         (elementGen(l, i) + randByEll(l)).mod(q) -> Seq(i)
       }
     }
+    log(s"List generation completed")
 
 
     def join(list: Seq[(BigInt, Seq[Int], Boolean)], round: Int): Seq[(BigInt, Seq[Int])] = {
@@ -72,7 +75,7 @@ case class WagnerAlg(k: Int, N: Int) extends ScorexLogging {
     }
 
     @tailrec
-    def loop(lists: Seq[Seq[(BigInt, Seq[Int])]]): Seq[(BigInt, Seq[Int])] = if (lists.length == 1) {
+    def loop(lists: GenSeq[Seq[(BigInt, Seq[Int])]]): Seq[(BigInt, Seq[Int])] = if (lists.length == 1) {
       log(s"${lists.head.size} solutions found")
       lists.head
     } else {
@@ -105,7 +108,13 @@ case class WagnerAlg(k: Int, N: Int) extends ScorexLogging {
     (atMost, atLeast)
   }
 
-  private def lg(x: Int): Int = (Math.log(x) / Math.log(2)).toInt
-    .ensuring(s => Math.pow(2, s) == x)
+}
+
+object WagnerAlg {
+
+  def expeсtedListSize(k: Int, b: BigInt): Int = {
+    val n = q.bigInteger.bitLength() - b.bigInteger.bitLength()
+    BigInt(2).pow(n / (1 + lg(k))).toInt
+  }
 
 }

@@ -21,5 +21,6 @@ package object autoleakus {
 
   def randomNumber(): PrivateKey = hash(scorex.utils.Random.randomBytes(32))
 
+  def lg(x: Int): Int = (Math.log(x) / Math.log(2)).toInt.ensuring(s => Math.pow(2, s) == x)
 
 }
