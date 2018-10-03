@@ -1,4 +1,4 @@
-package org.eroplatform
+package org.ergoplatform
 
 import org.bouncycastle.math.ec.ECPoint
 import scapi.sigma.BcDlogFp

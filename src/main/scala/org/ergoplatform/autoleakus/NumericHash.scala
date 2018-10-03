@@ -1,4 +1,4 @@
-package org.eroplatform.autoleakus
+package org.ergoplatform.autoleakus
 
 import org.bouncycastle.util.BigIntegers
 import scorex.crypto.hash.Blake2b512

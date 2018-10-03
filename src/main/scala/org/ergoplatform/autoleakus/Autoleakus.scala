@@ -1,4 +1,4 @@
-package org.eroplatform.autoleakus
+package org.ergoplatform.autoleakus
 
 import com.google.common.primitives.{Bytes, Ints}
 import org.bouncycastle.math.ec.ECPoint
