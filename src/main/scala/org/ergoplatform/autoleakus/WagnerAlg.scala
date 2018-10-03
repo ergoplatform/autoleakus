@@ -30,14 +30,12 @@ case class WagnerAlg(k: Int, N: Int) extends ScorexLogging {
       }.sum.mod(q)
     }.toMap
 
-    val lists: ParSeq[Seq[(BigInt, Seq[Int])]] = (0 until k).par.map { l =>
+    def initialLists: ParSeq[Seq[(BigInt, Seq[Int])]] = (0 until k).par.map { l =>
       log(s"Generating list ${l + 1} of $k with $N elements")
       (0 until N).map { i =>
         (elementGen(l, i) + randByEll(l)).mod(q) -> Seq(i)
       }
     }
-    log(s"List generation completed")
-
 
     def join(list: Seq[(BigInt, Seq[Int], Boolean)], round: Int): Seq[(BigInt, Seq[Int])] = {
       val size = list.size
@@ -91,7 +89,7 @@ case class WagnerAlg(k: Int, N: Int) extends ScorexLogging {
       loop(nextLev)
     }
 
-    loop(lists).map(_._2)
+    loop(initialLists).map(_._2)
   }
 
   private def log(str: String): Unit = logger.debug(str)
