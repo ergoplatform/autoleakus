@@ -1,9 +1,9 @@
-package org.ergoplatform.autoleakus.pow
-
+package org.ergoplatform.autoleakus.pow.ksum
 
 import com.google.common.primitives.{Bytes, Ints}
 import org.bouncycastle.math.ec.ECPoint
 import org.ergoplatform.autoleakus._
+import org.ergoplatform.autoleakus.pow.{Nonce, PowTask}
 import scorex.util.ScorexLogging
 
 import scala.annotation.tailrec
@@ -15,16 +15,18 @@ import scala.util.{Failure, Success, Try}
 /**
   * k-SUM solver via Wagners algorithm.
   */
-case class KSumSolver(k: Int, N: Int) extends PoWTask with ScorexLogging {
+case class KSumPowTask(k: Int, N: Int) extends PowTask with ScorexLogging {
 
   assert((k & (k - 1)) == 0, s"k should be a power of 2, $k given")
 
   private val n: Int = bitLength(q)
   private val lgK: Int = lg(k)
 
-  def solve(m: Array[Byte], x: BigInt, sk: BigInt, b: BigInt): Seq[KSumNonce] = {
-    val pkBytes = pkToBytes(genPk(sk))
-    val wBytes = pkToBytes(genPk(x))
+  override def solve(m: Array[Byte], x: BigInt, sk: BigInt, b: BigInt): Seq[KSumSolution] = {
+    val pk = genPk(sk)
+    val pkBytes = pkToBytes(pk)
+    val w = genPk(x)
+    val wBytes = pkToBytes(w)
 
     def elementGen(l: Int, i: Int): BigInt = {
       assert(l <= k, s"incorrect params $l, $i")
@@ -33,7 +35,7 @@ case class KSumSolver(k: Int, N: Int) extends PoWTask with ScorexLogging {
     }.mod(q)
 
     val h = bitLength(q) - bitLength(b)
-    val randoms: Map[Int, BigInt] = (0 until lgK).map(k => k -> randomNumber()).toMap
+    val randoms: Map[Int, BigInt] = (0 until lgK).map(k => k -> randomSecret()).toMap
     val randByEll: Map[Int, BigInt] = (0 until k).map { l =>
       l -> (0 until lgK).map { i =>
         if (((l >> i) & 1) == 1) {
@@ -103,26 +105,32 @@ case class KSumSolver(k: Int, N: Int) extends PoWTask with ScorexLogging {
       loop(nextLev)
     }
 
-    loop(initialLists).map(s => KSumNonce(s._2))
+    loop(initialLists).map { case (d, n) =>
+      KSumSolution(m, pk, w, KSumNonce(n), d)
+    }
   }
 
-  def nonceIsCorrect(nonce: KSumNonce): Try[Unit] = nonce match {
+  override def nonceIsCorrect(nonce: Nonce): Try[Unit] = nonce match {
     case n: KSumNonce if n.J.length == k && n.J.forall(_ < N) => Success()
     case _ => Failure(new Error(s"Nonce $nonce is incorrect for N=$N"))
   }
 
-  def f1(m: Array[Byte], pk: ECPoint, w: ECPoint, n: KSumNonce): BigInt = {
-    val pkBytes: Array[Byte] = pkToBytes(pk)
-    val wBytes: Array[Byte] = pkToBytes(w)
-    val indexByLevel = n.J.zipWithIndex.map(_.swap).toMap
-    (0 until k).map(l => H(m, pkBytes, wBytes, l, indexByLevel(l), 0)).sum.mod(q)
+  override def f1(m: Array[Byte], pk: ECPoint, w: ECPoint, nonce: Nonce): BigInt = nonce match {
+    case n: KSumNonce =>
+      val pkBytes: Array[Byte] = pkToBytes(pk)
+      val wBytes: Array[Byte] = pkToBytes(w)
+      val indexByLevel = n.J.zipWithIndex.map(_.swap).toMap
+      (0 until k).map(l => H(m, pkBytes, wBytes, l, indexByLevel(l), 0)).sum.mod(q)
+    case m => throw new Error(s"Incorrect task nonce $m")
   }
 
-  def f2(m: Array[Byte], pk: ECPoint, w: ECPoint, n: KSumNonce): BigInt = {
-    val pkBytes: Array[Byte] = pkToBytes(pk)
-    val wBytes: Array[Byte] = pkToBytes(w)
-    val indexByLevel = n.J.zipWithIndex.map(_.swap).toMap
-    (0 until k).map(l => H(m, pkBytes, wBytes, l, indexByLevel(l), 1)).sum.mod(q)
+  override def f2(m: Array[Byte], pk: ECPoint, w: ECPoint, nonce: Nonce): BigInt = nonce match {
+    case n: KSumNonce =>
+      val pkBytes: Array[Byte] = pkToBytes(pk)
+      val wBytes: Array[Byte] = pkToBytes(w)
+      val indexByLevel = n.J.zipWithIndex.map(_.swap).toMap
+      (0 until k).map(l => H(m, pkBytes, wBytes, l, indexByLevel(l), 1)).sum.mod(q)
+    case m => throw new Error(s"Incorrect task nonce $m")
   }
 
   private def log(str: String): Unit = logger.debug(str)
@@ -145,7 +153,7 @@ case class KSumSolver(k: Int, N: Int) extends PoWTask with ScorexLogging {
 
 }
 
-object KSumSolver {
+object KSumPowTask {
 
   def expeсtedListSize(k: Int, b: BigInt): Int = {
     val n = q.bigInteger.bitLength() - b.bigInteger.bitLength()
