@@ -1,24 +1,37 @@
 package org.ergoplatform.autoleakus.pow
 
-import org.ergoplatform.autoleakus.{lg, q, randomNumber}
+
+import com.google.common.primitives.{Bytes, Ints}
+import org.bouncycastle.math.ec.ECPoint
+import org.ergoplatform.autoleakus._
 import scorex.util.ScorexLogging
 
 import scala.annotation.tailrec
 import scala.collection.GenSeq
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.parallel.immutable.ParSeq
+import scala.util.{Failure, Success, Try}
 
 /**
   * k-SUM solver via Wagners algorithm.
   */
-case class WagnerAlg(k: Int, N: Int) extends ScorexLogging {
+case class KSumSolver(k: Int, N: Int) extends PoWTask with ScorexLogging {
 
   assert((k & (k - 1)) == 0, s"k should be a power of 2, $k given")
 
   private val n: Int = bitLength(q)
   private val lgK: Int = lg(k)
 
-  def solve(elementGen: (Int, Int) => BigInt, b: BigInt): Seq[Seq[Int]] = {
+  def solve(m: Array[Byte], x: BigInt, sk: BigInt, b: BigInt): Seq[KSumNonce] = {
+    val pkBytes = pkToBytes(genPk(sk))
+    val wBytes = pkToBytes(genPk(x))
+
+    def elementGen(l: Int, i: Int): BigInt = {
+      assert(l <= k, s"incorrect params $l, $i")
+      val sk1Shift: BigInt = if (l == 0) -sk else 0
+      H(m, pkBytes, wBytes, l, i, 0) + x * H(m, pkBytes, wBytes, l, i, 1) + sk1Shift
+    }.mod(q)
+
     val h = bitLength(q) - bitLength(b)
     val randoms: Map[Int, BigInt] = (0 until lgK).map(k => k -> randomNumber()).toMap
     val randByEll: Map[Int, BigInt] = (0 until k).map { l =>
@@ -90,7 +103,26 @@ case class WagnerAlg(k: Int, N: Int) extends ScorexLogging {
       loop(nextLev)
     }
 
-    loop(initialLists).map(_._2)
+    loop(initialLists).map(s => KSumNonce(s._2))
+  }
+
+  def nonceIsCorrect(nonce: KSumNonce): Try[Unit] = nonce match {
+    case n: KSumNonce if n.J.length == k && n.J.forall(_ < N) => Success()
+    case _ => Failure(new Error(s"Nonce $nonce is incorrect for N=$N"))
+  }
+
+  def f1(m: Array[Byte], pk: ECPoint, w: ECPoint, n: KSumNonce): BigInt = {
+    val pkBytes: Array[Byte] = pkToBytes(pk)
+    val wBytes: Array[Byte] = pkToBytes(w)
+    val indexByLevel = n.J.zipWithIndex.map(_.swap).toMap
+    (0 until k).map(l => H(m, pkBytes, wBytes, l, indexByLevel(l), 0)).sum.mod(q)
+  }
+
+  def f2(m: Array[Byte], pk: ECPoint, w: ECPoint, n: KSumNonce): BigInt = {
+    val pkBytes: Array[Byte] = pkToBytes(pk)
+    val wBytes: Array[Byte] = pkToBytes(w)
+    val indexByLevel = n.J.zipWithIndex.map(_.swap).toMap
+    (0 until k).map(l => H(m, pkBytes, wBytes, l, indexByLevel(l), 1)).sum.mod(q)
   }
 
   private def log(str: String): Unit = logger.debug(str)
@@ -107,9 +139,13 @@ case class WagnerAlg(k: Int, N: Int) extends ScorexLogging {
     (atMost, atLeast)
   }
 
+  private def H(m: Array[Byte], p1: Array[Byte], p2: Array[Byte], l: Int, i: Int, orderByte: Byte): BigInt = {
+    hash(Bytes.concat(m, p1, p2, Ints.toByteArray(i), Ints.toByteArray(l), Array(orderByte)))
+  }
+
 }
 
-object WagnerAlg {
+object KSumSolver {
 
   def expeсtedListSize(k: Int, b: BigInt): Int = {
     val n = q.bigInteger.bitLength() - b.bigInteger.bitLength()

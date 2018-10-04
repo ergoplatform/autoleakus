@@ -23,4 +23,6 @@ package object autoleakus {
 
   def lg(x: Int): Int = (Math.log(x) / Math.log(2)).toInt.ensuring(s => Math.pow(2, s) == x)
 
+  def pkToBytes(pk: ECPoint): Array[Byte] = pk.getEncoded(true)
+
 }

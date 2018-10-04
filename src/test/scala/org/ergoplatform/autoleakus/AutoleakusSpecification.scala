@@ -1,7 +1,6 @@
 package org.ergoplatform.autoleakus
 
-import com.google.common.primitives.Ints
-import org.ergoplatform.autoleakus.pow.WagnerAlg
+import org.ergoplatform.autoleakus.pow.KSumSolver
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.prop.{PropertyChecks, TableDrivenPropertyChecks}
 import org.scalatest.{Matchers, PropSpec}
@@ -12,16 +11,16 @@ class AutoleakusSpecification extends PropSpec with PropertyChecks with TableDri
 
   property("Sum to interval") {
     forAll(Arbitrary.arbitrary[Array[Byte]], kGen) { (m: Array[Byte], k: Int) =>
-      val wagner = WagnerAlg(k, NFromKandB(k, b))
+      val solver = KSumSolver(k, NFromKandB(k, b))
+      val sk = hash(m)
+      val pk = genPk(sk)
+      val x = hash(m ++ Array(1.toByte))
+      val w = genPk(x)
 
-      def elementGen(l: Int, i: Int): BigInt = {
-        assert(l < k)
-        hash(m ++ Ints.toByteArray(l) ++ Ints.toByteArray(i)).mod(q)
-      }
-
-      wagner.solve(elementGen, b).take(100).foreach { J =>
-        val sum: BigInt = J.zipWithIndex.map(li => elementGen(li._2, li._1)).sum.mod(q)
-        require(sum <= b || sum >= q - b, s"Incorrect sum $sum <= $b || $sum >= ${q - b} | ${J.indices} | ${J.indices.zipWithIndex.map(li => elementGen(li._2, li._1))}")
+      solver.solve(m, x, sk, b).take(100).foreach { n =>
+        solver.nonceIsCorrect(n) shouldBe 'success
+        val d = solver.f1(m, pk, w, n) + x * solver.f2(m, pk, w, n) - sk
+        (d < b || d > (q - b)) shouldBe true
       }
     }
   }
