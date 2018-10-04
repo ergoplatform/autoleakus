@@ -1,6 +1,7 @@
 package org.ergoplatform.autoleakus
 
 import com.google.common.primitives.Ints
+import org.ergoplatform.autoleakus.pow.WagnerAlg
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.prop.{PropertyChecks, TableDrivenPropertyChecks}
 import org.scalatest.{Matchers, PropSpec}

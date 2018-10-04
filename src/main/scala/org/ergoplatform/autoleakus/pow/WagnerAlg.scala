@@ -1,5 +1,6 @@
-package org.ergoplatform.autoleakus
+package org.ergoplatform.autoleakus.pow
 
+import org.ergoplatform.autoleakus.{lg, q, randomNumber}
 import scorex.util.ScorexLogging
 
 import scala.annotation.tailrec

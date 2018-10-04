@@ -2,6 +2,7 @@ package org.ergoplatform.autoleakus
 
 import com.google.common.primitives.{Bytes, Ints}
 import org.bouncycastle.math.ec.ECPoint
+import org.ergoplatform.autoleakus.pow.WagnerAlg
 
 import scala.util.Try
 

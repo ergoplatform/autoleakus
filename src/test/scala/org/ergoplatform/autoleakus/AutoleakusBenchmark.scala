@@ -1,5 +1,7 @@
 package org.ergoplatform.autoleakus
 
+import org.ergoplatform.autoleakus.pow.WagnerAlg
+
 /**
   * object to test autoleakus in realistic conditions
   */
