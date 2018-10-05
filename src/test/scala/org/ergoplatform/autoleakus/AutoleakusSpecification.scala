@@ -1,5 +1,6 @@
 package org.ergoplatform.autoleakus
 
+import org.ergoplatform.autoleakus.pow.chainsum.CSumPowTask
 import org.ergoplatform.autoleakus.pow.ksum.KSumPowTask
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.prop.{PropertyChecks, TableDrivenPropertyChecks}
@@ -24,10 +25,24 @@ class AutoleakusSpecification extends PropSpec with PropertyChecks with TableDri
     }
   }
 
-  property("Autoleakus should generate valid solutions") {
+  property("Autoleakus with ksum") {
     forAll(Arbitrary.arbitrary[Array[Byte]], kGen) { (m: Array[Byte], k: Int) =>
       val sk = hash(m)
       val alg = new Autoleakus(KSumPowTask(k, NFromKandB(k, b)))
+      val sols = alg.prove(m, b, sk)
+      sols.take(100).foreach { s =>
+        alg.verify(s, b) shouldBe 'success
+      }
+    }
+  }
+
+
+  property("Autoleakus with csum") {
+    val b: BigInt = q / BigInt("1000")
+    val N = 1000000
+    forAll(Arbitrary.arbitrary[Array[Byte]], kGen) { (m: Array[Byte], k: Int) =>
+      val sk = hash(m)
+      val alg = new Autoleakus(CSumPowTask(k, N))
       val sols = alg.prove(m, b, sk)
       sols.take(100).foreach { s =>
         alg.verify(s, b) shouldBe 'success
