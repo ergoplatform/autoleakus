@@ -15,21 +15,29 @@ case class CSumPowTask(k: Int, N: Int) extends PowTask with ScorexLogging {
   override def solve(m: Array[Byte], x: BigInt, sk: BigInt, b: BigInt): Seq[CSumSolution] = {
     val pk = genPk(sk)
     val w = genPk(x)
+    val p1 = pkToBytes(pk)
+    val p2 = pkToBytes(w)
+    log(s"Generate list of $N elements")
+    val list: IndexedSeq[BigInt] = (0 until N).map(i => getElement(m, p1, p2, i))
+
+    def fastGetElement(m: Array[Byte], p1: Array[Byte], p2: Array[Byte], i: Int): BigInt = list(i)
 
     @tailrec
-    def loop(seed: Int): Option[CSumSolution] = if (seed == -1) {
+    def loop(i: Int): Option[CSumSolution] = if (i == -1) {
       None
     } else {
-      val n = CSumNonce(Ints.toByteArray(seed))
-      val d = (f1(m, pk, w, n) + x * f2(m, pk, w, n) + sk).mod(q)
+      val seed = Ints.toByteArray(i)
+      val d = (calcChain(m, seed, p1, p2, 0: Byte, fastGetElement) +
+        x * calcChain(m, seed, p1, p2, 1: Byte, fastGetElement) + sk).mod(q)
       if (d <= b) {
-        log(s"solution found at seed ${seed}")
-        Some(CSumSolution(m, pk, w, n, d))
+        log(s"solution found at $i")
+        Some(CSumSolution(m, pk, w, CSumNonce(seed), d))
       } else {
-        loop(seed + 1)
+        loop(i + 1)
       }
     }
 
+    log(s"Start solution search")
     loop(0).toSeq
   }
 
@@ -39,21 +47,23 @@ case class CSumPowTask(k: Int, N: Int) extends PowTask with ScorexLogging {
   }
 
   override def f1(m: Array[Byte], pk: ECPoint, w: ECPoint, nonce: Nonce): BigInt = nonce match {
-    case n: CSumNonce =>
-      val p1 = pkToBytes(pk)
-      val p2 = pkToBytes(w)
-      val indexes = indexesBySeed(n.seed ++ m, 0)
-      indexes.map(i => getElement(m: Array[Byte], p1: Array[Byte], p2: Array[Byte], i: Int)).sum.mod(q)
+    case n: CSumNonce => calcChain(m, n.seed, pkToBytes(pk), pkToBytes(w), 1: Byte, getElement)
     case e => throw new Error(s"Incorrect task nonce $e")
   }
 
   override def f2(m: Array[Byte], pk: ECPoint, w: ECPoint, nonce: Nonce): BigInt = nonce match {
-    case n: CSumNonce =>
-      val p1 = pkToBytes(pk)
-      val p2 = pkToBytes(w)
-      val indexes = indexesBySeed(n.seed ++ m, 1)
-      indexes.map(i => getElement(m: Array[Byte], p1: Array[Byte], p2: Array[Byte], i: Int)).sum.mod(q)
+    case n: CSumNonce => calcChain(m, n.seed, pkToBytes(pk), pkToBytes(w), 1: Byte, getElement)
     case e => throw new Error(s"Incorrect task nonce $e")
+  }
+
+  private def calcChain(m: Array[Byte],
+                        seed: Array[Byte],
+                        p1: Array[Byte],
+                        p2: Array[Byte],
+                        orderByte: Byte,
+                        getElement: (Array[Byte], Array[Byte], Array[Byte], Int) => BigInt): BigInt = {
+    val indexes = indexesBySeed(seed ++ m, 1)
+    indexes.map(i => getElement(m: Array[Byte], p1: Array[Byte], p2: Array[Byte], i: Int)).sum.mod(q)
   }
 
   def indexesBySeed(seed: Array[Byte], orderByte: Byte): Seq[Int] = {
