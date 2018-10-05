@@ -18,7 +18,10 @@ case class CSumPowTask(k: Int, N: Int) extends PowTask with ScorexLogging {
     val p1 = pkToBytes(pk)
     val p2 = pkToBytes(w)
     log(s"Generate list of $N elements")
-    val list: IndexedSeq[BigInt] = (0 until N).map(i => getElement(m, p1, p2, i))
+    val list: IndexedSeq[BigInt] = (0 until N).map{i =>
+      if(i % 1000000 == 0 && i > 0) log(s"$i generated")
+      getElement(m, p1, p2, i)
+    }
 
     def fastGetElement(m: Array[Byte], p1: Array[Byte], p2: Array[Byte], i: Int): BigInt = list(i)
 
@@ -26,6 +29,7 @@ case class CSumPowTask(k: Int, N: Int) extends PowTask with ScorexLogging {
     def loop(i: Int): Option[CSumSolution] = if (i == -1) {
       None
     } else {
+      if(i % 1000000 == 0 && i > 0) log(s"$i nonce tested")
       val seed = Ints.toByteArray(i)
       val d = (calcChain(m, seed, p1, p2, 0: Byte, fastGetElement) +
         x * calcChain(m, seed, p1, p2, 1: Byte, fastGetElement) + sk).mod(q)
