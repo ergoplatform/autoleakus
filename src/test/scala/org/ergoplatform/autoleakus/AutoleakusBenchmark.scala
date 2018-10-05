@@ -22,8 +22,8 @@ object AutoleakusBenchmark extends App {
 
     println(s"N = $N")
     println(s"Minimum memory consumption: ${BigDecimal(N * (32 + 4)) / 1024 / 1024 / 1024} Gb")
-    println(s"Average element hits: ${BigDecimal(difficulty * k) / N}")
-    println(s"At least one hit after difficulty: ${N / k}")
+    println(s"Average element hits: ${BigDecimal(difficulty * k * 2) / N}")
+    println(s"At least one hit after difficulty: ${N / (k * 2)}")
 
     val m: Array[Byte] = scorex.util.Random.randomBytes()
     val sk = randomSecret()

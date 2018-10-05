@@ -1,7 +1,10 @@
 package org.ergoplatform.autoleakus.pow.chainsum
 
-import com.google.common.primitives.{Bytes, Ints}
+import java.math.BigInteger
+
+import com.google.common.primitives.{Bytes, Ints, Longs}
 import org.bouncycastle.math.ec.ECPoint
+import org.bouncycastle.util.BigIntegers
 import org.ergoplatform.autoleakus._
 import org.ergoplatform.autoleakus.pow.{Nonce, PowTask}
 import scorex.crypto.hash.Blake2b256
@@ -10,7 +13,14 @@ import scorex.util.ScorexLogging
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
+/**
+  * Task to find such a nonce, that generates 2 `k`-length sequences (s1,s2)
+  * of elements from the list of size `N`, such that `s1.sum + sk * s2.sum < b`
+  */
 case class CSumPowTask(k: Int, N: Int) extends PowTask with ScorexLogging {
+
+  assert(k > 0 && k <= 32, s"Incorrect k=$k")
+  private val NBigInteger: BigInteger = BigInt(N).bigInteger
 
   override def solve(m: Array[Byte], x: BigInt, sk: BigInt, b: BigInt): Seq[CSumSolution] = {
     val pk = genPk(sk)
@@ -18,67 +28,67 @@ case class CSumPowTask(k: Int, N: Int) extends PowTask with ScorexLogging {
     val p1 = pkToBytes(pk)
     val p2 = pkToBytes(w)
     log(s"Generate list of $N elements")
-    val list: IndexedSeq[BigInt] = (0 until N).map{i =>
-      if(i % 1000000 == 0 && i > 0) log(s"$i generated")
-      getElement(m, p1, p2, i)
+    val list: IndexedSeq[BigInt] = (0 until N).map { i =>
+      if (i % 1000000 == 0 && i > 0) log(s"$i generated")
+      genElement(m, p1, p2, i)
     }
 
     def fastGetElement(m: Array[Byte], p1: Array[Byte], p2: Array[Byte], i: Int): BigInt = list(i)
 
     @tailrec
-    def loop(i: Int): Option[CSumSolution] = if (i == -1) {
+    def loop(i: Long): Option[CSumSolution] = if (i == -1) {
       None
     } else {
-      if(i % 1000000 == 0 && i > 0) log(s"$i nonce tested")
-      val seed = Ints.toByteArray(i)
-      val d = (calcChain(m, seed, p1, p2, 0: Byte, fastGetElement) +
-        x * calcChain(m, seed, p1, p2, 1: Byte, fastGetElement) + sk).mod(q)
+      if (i % 1000000 == 0 && i > 0) log(s"$i nonce tested")
+      val nonce = Longs.toByteArray(i)
+      val d = (calcChain(m, nonce, p1, p2, 0: Byte, fastGetElement) +
+        x * calcChain(m, nonce, p1, p2, 1: Byte, fastGetElement) + sk).mod(q)
       if (d <= b) {
         log(s"solution found at $i")
-        Some(CSumSolution(m, pk, w, CSumNonce(seed), d))
+        Some(CSumSolution(m, pk, w, CSumNonce(nonce), d))
       } else {
         loop(i + 1)
       }
     }
 
-    log(s"Start solution search")
+    log(s"Start search of solution with $k elements from list with $N elements")
     loop(0).toSeq
   }
 
   override def nonceIsCorrect(nonce: Nonce): Try[Unit] = nonce match {
-    case n: CSumNonce => Success()
+    case n: CSumNonce if n.nonceBytes.length == 8 => Success()
     case _ => Failure(new Error(s"Nonce $nonce is incorrect for N=$N"))
   }
 
   override def f1(m: Array[Byte], pk: ECPoint, w: ECPoint, nonce: Nonce): BigInt = nonce match {
-    case n: CSumNonce => calcChain(m, n.seed, pkToBytes(pk), pkToBytes(w), 1: Byte, getElement)
+    case n: CSumNonce => calcChain(m, n.nonceBytes, pkToBytes(pk), pkToBytes(w), 1: Byte, genElement)
     case e => throw new Error(s"Incorrect task nonce $e")
   }
 
   override def f2(m: Array[Byte], pk: ECPoint, w: ECPoint, nonce: Nonce): BigInt = nonce match {
-    case n: CSumNonce => calcChain(m, n.seed, pkToBytes(pk), pkToBytes(w), 1: Byte, getElement)
+    case n: CSumNonce => calcChain(m, n.nonceBytes, pkToBytes(pk), pkToBytes(w), 1: Byte, genElement)
     case e => throw new Error(s"Incorrect task nonce $e")
   }
 
   private def calcChain(m: Array[Byte],
-                        seed: Array[Byte],
+                        nonceBytes: Array[Byte],
                         p1: Array[Byte],
                         p2: Array[Byte],
                         orderByte: Byte,
                         getElement: (Array[Byte], Array[Byte], Array[Byte], Int) => BigInt): BigInt = {
-    val indexes = indexesBySeed(seed ++ m, 1)
+    val indexes = genIndexes(m, nonceBytes, 1)
     indexes.map(i => getElement(m: Array[Byte], p1: Array[Byte], p2: Array[Byte], i: Int)).sum.mod(q)
   }
 
-  def indexesBySeed(seed: Array[Byte], orderByte: Byte): Seq[Int] = {
-    // todo this function should be changed
-    assert(k <= 256 / 4, "Current implementation allows only k <= 32")
-    Blake2b256(orderByte +: seed).grouped(4).take(k).toList.map(b => BigInt(b).mod(N).toInt)
+  private def genIndexes(m: Array[Byte], nonceBytes: Array[Byte], orderByte: Byte): Seq[Int] = {
+    assert(k <= 32, "Current implementation allows only k <= 256 / 4")
+    Blake2b256(Bytes.concat(Array(orderByte), m, nonceBytes)).grouped(4).take(k).toList
+      .map(b => BigIntegers.fromUnsignedByteArray(b).mod(NBigInteger).intValue())
   }
 
   private def log(str: String): Unit = logger.debug(str)
 
-  private def getElement(m: Array[Byte], p1: Array[Byte], p2: Array[Byte], i: Int): BigInt = {
+  private def genElement(m: Array[Byte], p1: Array[Byte], p2: Array[Byte], i: Int): BigInt = {
     hash(Bytes.concat(m, p1, p2, Ints.toByteArray(i)))
   }
 

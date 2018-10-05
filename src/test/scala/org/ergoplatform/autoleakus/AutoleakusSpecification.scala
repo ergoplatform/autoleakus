@@ -2,11 +2,12 @@ package org.ergoplatform.autoleakus
 
 import org.ergoplatform.autoleakus.pow.chainsum.CSumPowTask
 import org.ergoplatform.autoleakus.pow.ksum.KSumPowTask
-import org.scalacheck.{Arbitrary, Gen}
+import org.scalacheck.{Arbitrary, Gen, Shrink}
 import org.scalatest.prop.{PropertyChecks, TableDrivenPropertyChecks}
 import org.scalatest.{Matchers, PropSpec}
 
 class AutoleakusSpecification extends PropSpec with PropertyChecks with TableDrivenPropertyChecks with Matchers {
+  protected implicit def noShrink[A]: Shrink[A] = Shrink(_ => Stream.empty)
 
   val b: BigInt = q / BigInt("1000000000000")
 
@@ -36,10 +37,9 @@ class AutoleakusSpecification extends PropSpec with PropertyChecks with TableDri
     }
   }
 
-
   property("Autoleakus with csum") {
     val b: BigInt = q / BigInt("1000")
-    val N = 1000000
+    val N = 10000
     forAll(Arbitrary.arbitrary[Array[Byte]], kGen) { (m: Array[Byte], k: Int) =>
       val sk = hash(m)
       val alg = new Autoleakus(CSumPowTask(k, N))
