@@ -61,7 +61,7 @@ case class CSumPowTask(k: Int, N: Int) extends PowTask with ScorexLogging {
   }
 
   override def f1(m: Array[Byte], pk: ECPoint, w: ECPoint, nonce: Nonce): BigInt = nonce match {
-    case n: CSumNonce => calcChain(m, n.nonceBytes, pkToBytes(pk), pkToBytes(w), 1: Byte, genElement)
+    case n: CSumNonce => calcChain(m, n.nonceBytes, pkToBytes(pk), pkToBytes(w), 0: Byte, genElement)
     case e => throw new Error(s"Incorrect task nonce $e")
   }
 
@@ -76,8 +76,8 @@ case class CSumPowTask(k: Int, N: Int) extends PowTask with ScorexLogging {
                         p2: Array[Byte],
                         orderByte: Byte,
                         getElement: (Array[Byte], Array[Byte], Array[Byte], Int) => BigInt): BigInt = {
-    val indexes = genIndexes(m, nonceBytes, 1)
-    indexes.map(i => getElement(m: Array[Byte], p1: Array[Byte], p2: Array[Byte], i: Int)).sum.mod(q)
+    genIndexes(m, nonceBytes, orderByte)
+      .map(i => getElement(m: Array[Byte], p1: Array[Byte], p2: Array[Byte], i: Int)).sum.mod(q)
   }
 
   private def genIndexes(m: Array[Byte], nonceBytes: Array[Byte], orderByte: Byte): Seq[Int] = {
