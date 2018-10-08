@@ -42,7 +42,7 @@ case class CSumPowTask(k: Int, N: Int) extends PowTask with ScorexLogging {
       if (i % 1000000 == 0 && i > 0) log(s"$i nonce tested")
       val nonce = Longs.toByteArray(i)
       val d = (calcChain(m, nonce, p1, p2, 0: Byte, fastGetElement) +
-        x * calcChain(m, nonce, p1, p2, 1: Byte, fastGetElement) + sk).mod(q)
+        x * calcChain(m, nonce, p1, p2, 1: Byte, fastGetElement) - sk).mod(q)
       if (d <= b) {
         log(s"solution found at $i")
         Some(CSumSolution(m, pk, w, CSumNonce(nonce), d))

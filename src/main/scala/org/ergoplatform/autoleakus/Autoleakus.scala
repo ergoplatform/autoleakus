@@ -11,7 +11,8 @@ class Autoleakus(powTask: PowTask) {
 
   def prove(m: Array[Byte], b: BigInt, sk: BigInt): Seq[Solution] = powTask.solve(m, randomSecret(), sk, b)
 
-  def verify(s: Solution, b: BigInt): Try[Unit] = powTask.nonceIsCorrect(s.n) orElse Try {
+  def verify(s: Solution, b: BigInt): Try[Unit] = Try {
+    powTask.nonceIsCorrect(s.n).get
     require(s.d < b || s.d > (q - b), s"Incorrect d=${s.d} for b=$b")
     require(s.pk.getCurve == group.curve && !s.pk.isInfinity, "pk is incorrect")
     require(s.w.getCurve == group.curve && !s.w.isInfinity, "w is incorrect")
