@@ -19,7 +19,7 @@ import scala.util.{Failure, Success, Try}
   */
 case class CSumPowTask(k: Int, N: Int) extends PowTask with ScorexLogging {
 
-  assert(k > 0 && k <= 32, s"Incorrect k=$k")
+  assert(k > 0, s"Incorrect k=$k")
   private val NBigInteger: BigInteger = BigInt(N).bigInteger
 
   override def solve(m: Array[Byte], x: BigInt, sk: BigInt, b: BigInt): Seq[CSumSolution] = {
@@ -81,10 +81,20 @@ case class CSumPowTask(k: Int, N: Int) extends PowTask with ScorexLogging {
   }
 
   private def genIndexes(m: Array[Byte], nonceBytes: Array[Byte], orderByte: Byte): Seq[Int] = {
-    assert(k <= 32, "Current implementation allows only k <= 256 / 4")
-    Blake2b256(Bytes.concat(Array(orderByte), m, nonceBytes)).grouped(4).take(k).toList
-      .map(b => BigIntegers.fromUnsignedByteArray(b).mod(NBigInteger).intValue())
-  }
+    @tailrec
+    def loop(seed: Array[Byte], acc: Seq[Int]): Seq[Int] = {
+      val hash = Blake2b256(seed)
+      val nextBatch = hash.grouped(4).map(b => BigIntegers.fromUnsignedByteArray(b).mod(NBigInteger).intValue())
+      val newAcc = (acc ++ nextBatch).distinct
+      if (newAcc.length >= k) {
+        newAcc.take(k)
+      } else {
+        loop(hash, newAcc)
+      }
+    }
+
+    loop(Bytes.concat(Array(orderByte), m, nonceBytes), Seq())
+  }.ensuring(_.length == k)
 
   private def log(str: String): Unit = logger.debug(str)
 
