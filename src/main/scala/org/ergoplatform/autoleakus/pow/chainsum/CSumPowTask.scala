@@ -8,7 +8,6 @@ import org.bouncycastle.util.BigIntegers
 import org.ergoplatform.autoleakus._
 import org.ergoplatform.autoleakus.pow.{Nonce, PowTask}
 import scorex.crypto.hash.Blake2b256
-import scorex.util.ScorexLogging
 
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
@@ -17,7 +16,7 @@ import scala.util.{Failure, Success, Try}
   * Task to find such a nonce, that generates 2 `k`-length sequences (s1,s2)
   * of elements from the list of size `N`, such that `s1.sum + sk * s2.sum < b`
   */
-case class CSumPowTask(k: Int, N: Int) extends PowTask with ScorexLogging {
+case class CSumPowTask(k: Int, N: Int) extends PowTask {
 
   assert(k > 0, s"Incorrect k=$k")
   private val NBigInteger: BigInteger = BigInt(N).bigInteger
@@ -95,8 +94,6 @@ case class CSumPowTask(k: Int, N: Int) extends PowTask with ScorexLogging {
 
     loop(Bytes.concat(Array(orderByte), m, nonceBytes), Seq())
   }.ensuring(_.length == k)
-
-  private def log(str: String): Unit = logger.debug(str)
 
   private def genElement(m: Array[Byte], p1: Array[Byte], p2: Array[Byte], i: Int): BigInt = {
     hash(Bytes.concat(m, p1, p2, Ints.toByteArray(i)))

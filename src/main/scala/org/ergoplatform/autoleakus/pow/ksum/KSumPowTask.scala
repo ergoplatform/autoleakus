@@ -4,7 +4,6 @@ import com.google.common.primitives.{Bytes, Ints}
 import org.bouncycastle.math.ec.ECPoint
 import org.ergoplatform.autoleakus._
 import org.ergoplatform.autoleakus.pow.{Nonce, PowTask}
-import scorex.util.ScorexLogging
 
 import scala.annotation.tailrec
 import scala.collection.GenSeq
@@ -15,7 +14,7 @@ import scala.util.{Failure, Success, Try}
 /**
   * k-SUM solver via Wagners algorithm.
   */
-case class KSumPowTask(k: Int, N: Int) extends PowTask with ScorexLogging {
+case class KSumPowTask(k: Int, N: Int) extends PowTask {
 
   assert((k & (k - 1)) == 0, s"k should be a power of 2, $k given")
 
@@ -105,8 +104,8 @@ case class KSumPowTask(k: Int, N: Int) extends PowTask with ScorexLogging {
       loop(nextLev)
     }
 
-    loop(initialLists).map { case (d, n) =>
-      KSumSolution(m, pk, w, KSumNonce(n), d)
+    loop(initialLists).map { case (d, nonce) =>
+      KSumSolution(m, pk, w, KSumNonce(nonce), d)
     }
   }
 
@@ -121,7 +120,7 @@ case class KSumPowTask(k: Int, N: Int) extends PowTask with ScorexLogging {
       val wBytes: Array[Byte] = pkToBytes(w)
       val indexByLevel = n.J.zipWithIndex.map(_.swap).toMap
       (0 until k).map(l => H(m, pkBytes, wBytes, l, indexByLevel(l), 0)).sum.mod(q)
-    case m => throw new Error(s"Incorrect task nonce $m")
+    case msg => throw new Error(s"Incorrect task nonce $msg")
   }
 
   override def f2(m: Array[Byte], pk: ECPoint, w: ECPoint, nonce: Nonce): BigInt = nonce match {
@@ -130,10 +129,8 @@ case class KSumPowTask(k: Int, N: Int) extends PowTask with ScorexLogging {
       val wBytes: Array[Byte] = pkToBytes(w)
       val indexByLevel = n.J.zipWithIndex.map(_.swap).toMap
       (0 until k).map(l => H(m, pkBytes, wBytes, l, indexByLevel(l), 1)).sum.mod(q)
-    case m => throw new Error(s"Incorrect task nonce $m")
+    case msg => throw new Error(s"Incorrect task nonce $msg")
   }
-
-  private def log(str: String): Unit = logger.debug(str)
 
   private def bitLength(bi: BigInt): Int = {
     assert(bi >= 0, "only positive numbers are allowed")

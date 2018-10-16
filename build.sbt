@@ -16,7 +16,6 @@ libraryDependencies ++= Seq(
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0",
   "org.scorexfoundation" %% "sigma-state" % "0.10.0",
 
-  "org.scalactic" %% "scalactic" % "3.0.5" % "test",
   "org.scalatest" %% "scalatest" % "3.0.5" % "test",
   "org.scalacheck" %% "scalacheck" % "1.14.0" % "test"
 )
