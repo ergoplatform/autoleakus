@@ -80,19 +80,13 @@ case class CSumPowTask(k: Int, N: Int) extends PowTask {
   }
 
   private def genIndexes(m: Array[Byte], nonceBytes: Array[Byte], orderByte: Byte): Seq[Int] = {
-    @tailrec
-    def loop(seed: Array[Byte], acc: Seq[Int]): Seq[Int] = {
-      val hash = Blake2b256(seed)
-      val nextBatch = hash.grouped(4).map(b => BigIntegers.fromUnsignedByteArray(b).mod(NBigInteger).intValue())
-      val newAcc = (acc ++ nextBatch).distinct
-      if (newAcc.length >= k) {
-        newAcc.take(k)
-      } else {
-        loop(hash, newAcc)
-      }
+    val seed = Bytes.concat(m, nonceBytes, Array(orderByte))
+    val hashesRequired = (k.toDouble / 8).ceil.toInt
+    val indexes = (0 until hashesRequired) flatMap { i =>
+      val hash = Blake2b256(Bytes.concat(seed, Ints.toByteArray(i)))
+      hash.grouped(4).map(b => BigIntegers.fromUnsignedByteArray(b).mod(NBigInteger).intValue())
     }
-
-    loop(Bytes.concat(Array(orderByte), m, nonceBytes), Seq())
+    indexes.take(k)
   }.ensuring(_.length == k)
 
   private def genElement(m: Array[Byte], p1: Array[Byte], p2: Array[Byte], i: Int): BigInt = {
