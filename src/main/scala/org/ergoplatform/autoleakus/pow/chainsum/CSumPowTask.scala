@@ -14,7 +14,7 @@ import scala.util.{Failure, Success, Try}
 
 /**
   * Task to find such a nonce, that generates 2 `k`-length sequences (s1,s2)
-  * of elements from the list of size `N`, such that `s1.sum + sk * s2.sum < b`
+  * of elements from the list of size `N`, such that `s1.sum + x * s2.sum - sk < b`
   */
 case class CSumPowTask(k: Int, N: Int) extends PowTask {
 

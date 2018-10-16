@@ -5,7 +5,7 @@ import org.ergoplatform.autoleakus.pow.{PowTask, Solution}
 import scala.util.Try
 
 /**
-  * Non-outsourceable task of the form `f1(m, pk, w, n) + x * f2(m, pk, w, n) + sk < b`
+  * Non-outsourceable task of the form `f1(m, pk, w, n) + x * f2(m, pk, w, n) - sk < b`
   */
 class Autoleakus(powTask: PowTask) {
 
