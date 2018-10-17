@@ -1,7 +1,7 @@
 package org.ergoplatform.autoleakus
 
-import org.ergoplatform.autoleakus.pow.chainsum.CSumPowTask
-import org.ergoplatform.autoleakus.pow.ksum.KSumPowTask
+import org.ergoplatform.autoleakus.pow.ksum.hashBinding.HKSumPowTask
+import org.ergoplatform.autoleakus.pow.ksum.noBinding.NKSumPowTask
 import org.scalacheck.{Arbitrary, Gen, Shrink}
 import org.scalatest.prop.{PropertyChecks, TableDrivenPropertyChecks}
 import org.scalatest.{Matchers, PropSpec}
@@ -13,7 +13,7 @@ class AutoleakusSpecification extends PropSpec with PropertyChecks with TableDri
 
   property("Sum to interval") {
     forAll(Arbitrary.arbitrary[Array[Byte]], kGen) { (m: Array[Byte], k: Int) =>
-      val solver = KSumPowTask(k, NFromKandB(k, b))
+      val solver = NKSumPowTask(k, NFromKandB(k, b))
       val sk = hash(m)
       val pk = genPk(sk)
       val x = hash(m ++ Array(1.toByte))
@@ -29,7 +29,7 @@ class AutoleakusSpecification extends PropSpec with PropertyChecks with TableDri
   property("Autoleakus with ksum") {
     forAll(Arbitrary.arbitrary[Array[Byte]], kGen) { (m: Array[Byte], k: Int) =>
       val sk = hash(m)
-      val alg = new Autoleakus(KSumPowTask(k, NFromKandB(k, b)))
+      val alg = new Autoleakus(NKSumPowTask(k, NFromKandB(k, b)))
       val sols = alg.prove(m, b, sk)
       sols.take(100).foreach { s =>
         alg.verify(s, b) shouldBe 'success
@@ -42,7 +42,7 @@ class AutoleakusSpecification extends PropSpec with PropertyChecks with TableDri
     val N = 10000
     forAll(Arbitrary.arbitrary[Array[Byte]], kGen) { (m: Array[Byte], k: Int) =>
       val sk = hash(m)
-      val alg = new Autoleakus(CSumPowTask(k, N))
+      val alg = new Autoleakus(HKSumPowTask(k, N))
       val sols = alg.prove(m, b, sk)
       sols.take(100).foreach { s =>
         alg.verify(s, b) shouldBe 'success

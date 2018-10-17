@@ -1,7 +1,7 @@
 package org.ergoplatform.autoleakus
 
-import org.ergoplatform.autoleakus.pow.chainsum.CSumPowTask
-import org.ergoplatform.autoleakus.pow.ksum.KSumPowTask
+import org.ergoplatform.autoleakus.pow.ksum.hashBinding.HKSumPowTask
+import org.ergoplatform.autoleakus.pow.ksum.noBinding.NKSumPowTask
 
 /**
   * object to test autoleakus in realistic conditions
@@ -28,7 +28,7 @@ object AutoleakusBenchmark extends App {
     val m: Array[Byte] = scorex.util.Random.randomBytes()
     val sk = randomSecret()
 
-    val alg = new Autoleakus(CSumPowTask(k, N))
+    val alg = new Autoleakus(HKSumPowTask(k, N))
     val st = System.currentTimeMillis()
     val sols = alg.prove(m, b, sk)
     val st2 = System.currentTimeMillis()
@@ -45,7 +45,7 @@ object AutoleakusBenchmark extends App {
     // 1 solution
     val b: BigInt = BigInt(2).pow(250 - numbersBitLength * (1 + lg(k)))
     // numbers encoded with numbersBitLength bits
-    val N: Int = KSumPowTask.expeсtedListSize(k, b)
+    val N: Int = NKSumPowTask.expeсtedListSize(k, b)
 
     println(s"N = $N")
     println(s"Minimum memory consumption: ${BigDecimal(N * k * (32 + 4)) / 1024 / 1024 / 1024} Gb")
@@ -53,7 +53,7 @@ object AutoleakusBenchmark extends App {
     val m: Array[Byte] = scorex.util.Random.randomBytes()
     val sk = randomSecret()
 
-    val alg = new Autoleakus(KSumPowTask(k, N))
+    val alg = new Autoleakus(NKSumPowTask(k, N))
     val sols = alg.prove(m, b, sk)
     val st = System.currentTimeMillis()
     println(s"start solution verification")
