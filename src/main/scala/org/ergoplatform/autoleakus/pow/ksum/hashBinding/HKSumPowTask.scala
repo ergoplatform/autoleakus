@@ -3,7 +3,6 @@ package org.ergoplatform.autoleakus.pow.ksum.hashBinding
 import java.math.BigInteger
 
 import com.google.common.primitives.{Bytes, Ints, Longs}
-import org.bouncycastle.math.ec.ECPoint
 import org.bouncycastle.util.BigIntegers
 import org.ergoplatform.autoleakus._
 import org.ergoplatform.autoleakus.pow.Nonce
@@ -22,20 +21,28 @@ case class HKSumPowTask(k: Int, N: Int) extends KSumPowTask {
 
   private val NBigInteger: BigInteger = BigInt(N).bigInteger
 
-  override def solve(m: Array[Byte], x: BigInt, sk: BigInt, b: BigInt): Seq[HKSumSolution] = {
+  private var list: IndexedSeq[BigInt] = IndexedSeq()
+  private var x: BigInt = randomSecret()
+
+  def initialize(m: Array[Byte], sk: BigInt): Unit = {
+    x = randomSecret()
     val pk = genPk(sk)
     val w = genPk(x)
     val p1 = pkToBytes(pk)
     val p2 = pkToBytes(w)
     log(s"Generate list of $N elements")
-    val list: IndexedSeq[BigInt] = (0 until N).map { i =>
+    list = (0 until N).map { i =>
       if (i % 1000000 == 0 && i > 0) log(s"$i generated")
       val indexBytes = Ints.toByteArray(i)
       genElement(m, p1, p2, indexBytes, 0: Byte) + x * genElement(m, p1, p2, indexBytes, 1: Byte)
     }
+  }
+
+  def checkNonces(m: Array[Byte], sk: BigInt, b: BigInt, startNonce: Long, endNonce: Long): Option[HKSumSolution] = {
+    log(s"Going to check nonces from $startNonce to $endNonce")
 
     @tailrec
-    def loop(i: Long): Option[HKSumSolution] = if (i == -1) {
+    def loop(i: Long): Option[HKSumSolution] = if (i == endNonce) {
       None
     } else {
       if (i % 1000000 == 0 && i > 0) log(s"$i nonce tested")
@@ -43,14 +50,20 @@ case class HKSumPowTask(k: Int, N: Int) extends KSumPowTask {
       val d = (genIndexes(m, nonce).map(i => list(i)).sum - sk).mod(q)
       if (d <= b) {
         log(s"Solution found at $i")
-        Some(HKSumSolution(m, pk, w, HKSumNonce(nonce), d))
+        Some(HKSumSolution(m, genPk(sk), genPk(x), HKSumNonce(nonce), d))
       } else {
         loop(i + 1)
       }
     }
 
     log(s"Start search of solution with $k elements from list with $N elements")
-    loop(0).toSeq
+    loop(startNonce)
+  }
+
+
+  override def solve(m: Array[Byte], sk: BigInt, b: BigInt): Seq[HKSumSolution] = {
+    initialize(m, sk)
+    checkNonces(m, sk, b, Long.MinValue, Long.MaxValue).toSeq
   }
 
   override def nonceIsCorrect(nonce: Nonce): Try[Unit] = nonce match {

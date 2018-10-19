@@ -1,6 +1,6 @@
 package org.ergoplatform.autoleakus
 
-import org.ergoplatform.autoleakus.pow.ksum.hashBinding.HKSumPowTask
+import org.ergoplatform.autoleakus.pow.ksum.hashBinding.{HKSumPowTask, HKSumSolution}
 import org.ergoplatform.autoleakus.pow.ksum.noBinding.NKSumPowTask
 import org.scalacheck.{Arbitrary, Gen, Shrink}
 import org.scalatest.prop.{PropertyChecks, TableDrivenPropertyChecks}
@@ -19,7 +19,7 @@ class AutoleakusSpecification extends PropSpec with PropertyChecks with TableDri
       val x = hash(m ++ Array(1.toByte))
       val w = genPk(x)
 
-      solver.solve(m, x, sk, b).take(100).foreach { s =>
+      solver.solve(m, sk, b).take(100).foreach { s =>
         solver.nonceIsCorrect(s.n) shouldBe 'success
         (s.d < b || s.d > (q - b)) shouldBe true
       }
@@ -50,6 +50,22 @@ class AutoleakusSpecification extends PropSpec with PropertyChecks with TableDri
     }
   }
 
+  property("Allow to check specified nonces in HKSumPowTask") {
+    val b: BigInt = q / BigInt("1000")
+    val N = 10000
+    val k = 128
+    val pow = HKSumPowTask(k, N)
+    forAll { m: Array[Byte] =>
+      val sk = hash(m)
+      pow.initialize(m, sk)
+      var solution: Option[HKSumSolution] = None
+      var i = 0
+      while (solution.isEmpty) {
+        i += 100
+        solution = pow.checkNonces(m, sk, b, i, i + 100)
+      }
+    }
+  }
 
   def kGen: Gen[Int] = Gen.choose(2, 5).map(p => BigInt(2).pow(p).toInt)
 

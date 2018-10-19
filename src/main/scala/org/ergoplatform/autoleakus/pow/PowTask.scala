@@ -13,7 +13,7 @@ trait PowTask extends ScorexLogging {
   /**
     * Solve the puzzle
     */
-  def solve(m: Array[Byte], x: BigInt, sk: BigInt, b: BigInt): Seq[Solution]
+  def solve(m: Array[Byte], sk: BigInt, b: BigInt): Seq[Solution]
 
   /**
     * Check, `nonce` is the correct nonce for current puzzle

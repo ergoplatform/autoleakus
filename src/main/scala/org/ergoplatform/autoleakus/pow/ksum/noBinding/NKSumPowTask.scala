@@ -23,7 +23,8 @@ case class NKSumPowTask(k: Int, N: Int) extends KSumPowTask {
   private val n: Int = bitLength(q)
   private val lgK: Int = lg(k)
 
-  override def solve(m: Array[Byte], x: BigInt, sk: BigInt, b: BigInt): Seq[NKSumSolution] = {
+  override def solve(m: Array[Byte], sk: BigInt, b: BigInt): Seq[NKSumSolution] = {
+    val x: BigInt = randomSecret()
     val pk = genPk(sk)
     val pkBytes = pkToBytes(pk)
     val w = genPk(x)

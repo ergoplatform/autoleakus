@@ -9,7 +9,7 @@ import scala.util.Try
   */
 class Autoleakus(powTask: PowTask) {
 
-  def prove(m: Array[Byte], b: BigInt, sk: BigInt): Seq[Solution] = powTask.solve(m, randomSecret(), sk, b)
+  def prove(m: Array[Byte], b: BigInt, sk: BigInt): Seq[Solution] = powTask.solve(m, sk, b)
 
   def verify(s: Solution, b: BigInt): Try[Unit] = Try {
     powTask.nonceIsCorrect(s.n).get
