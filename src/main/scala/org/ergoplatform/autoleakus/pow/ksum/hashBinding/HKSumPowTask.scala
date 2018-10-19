@@ -34,7 +34,7 @@ case class HKSumPowTask(k: Int, N: Int) extends KSumPowTask {
     list = (0 until N).map { i =>
       if (i % 1000000 == 0 && i > 0) log(s"$i generated")
       val indexBytes = Ints.toByteArray(i)
-      genElement(m, p1, p2, indexBytes, 0: Byte) + x * genElement(m, p1, p2, indexBytes, 1: Byte)
+      (genElement(m, p1, p2, indexBytes, 0: Byte) + x * genElement(m, p1, p2, indexBytes, 1: Byte)).mod(q)
     }
   }
 
