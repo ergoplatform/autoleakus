@@ -28,7 +28,7 @@ object AutoleakusBenchmark extends App {
     val m: Array[Byte] = scorex.util.Random.randomBytes()
     val sk = randomSecret()
 
-    val alg = new Autoleakus(HKSumPowTask(k, N))
+    val alg = new Autoleakus(new HKSumPowTask(k, N))
     val st = System.currentTimeMillis()
     val sols = alg.prove(m, b, sk)
     val st2 = System.currentTimeMillis()
@@ -53,7 +53,7 @@ object AutoleakusBenchmark extends App {
     val m: Array[Byte] = scorex.util.Random.randomBytes()
     val sk = randomSecret()
 
-    val alg = new Autoleakus(NKSumPowTask(k, N))
+    val alg = new Autoleakus(new NKSumPowTask(k, N))
     val sols = alg.prove(m, b, sk)
     val st = System.currentTimeMillis()
     println(s"start solution verification")

@@ -13,7 +13,7 @@ class AutoleakusSpecification extends PropSpec with PropertyChecks with TableDri
 
   property("Sum to interval") {
     forAll(Arbitrary.arbitrary[Array[Byte]], kGen) { (m: Array[Byte], k: Int) =>
-      val solver = NKSumPowTask(k, NFromKandB(k, b))
+      val solver = new NKSumPowTask(k, NFromKandB(k, b))
       val sk = hash(m)
       val pk = genPk(sk)
       val x = hash(m ++ Array(1.toByte))
@@ -29,7 +29,7 @@ class AutoleakusSpecification extends PropSpec with PropertyChecks with TableDri
   property("Autoleakus with ksum") {
     forAll(Arbitrary.arbitrary[Array[Byte]], kGen) { (m: Array[Byte], k: Int) =>
       val sk = hash(m)
-      val alg = new Autoleakus(NKSumPowTask(k, NFromKandB(k, b)))
+      val alg = new Autoleakus(new NKSumPowTask(k, NFromKandB(k, b)))
       val sols = alg.prove(m, b, sk)
       sols.take(100).foreach { s =>
         alg.verify(s, b) shouldBe 'success
@@ -42,7 +42,7 @@ class AutoleakusSpecification extends PropSpec with PropertyChecks with TableDri
     val N = 10000
     forAll(Arbitrary.arbitrary[Array[Byte]], kGen) { (m: Array[Byte], k: Int) =>
       val sk = hash(m)
-      val alg = new Autoleakus(HKSumPowTask(k, N))
+      val alg = new Autoleakus(new HKSumPowTask(k, N))
       val sols = alg.prove(m, b, sk)
       sols.take(100).foreach { s =>
         alg.verify(s, b) shouldBe 'success
@@ -54,7 +54,7 @@ class AutoleakusSpecification extends PropSpec with PropertyChecks with TableDri
     val b: BigInt = q / BigInt("1000")
     val N = 10000
     val k = 128
-    val pow = HKSumPowTask(k, N)
+    val pow = new HKSumPowTask(k, N)
     forAll { m: Array[Byte] =>
       val sk = hash(m)
       pow.initialize(m, sk)

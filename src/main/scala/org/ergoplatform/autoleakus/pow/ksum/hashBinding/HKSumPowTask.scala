@@ -17,7 +17,7 @@ import scala.util.{Failure, Success, Try}
   * Brute-force is required by algorithm validation, as soon as indexes of elements are
   * generated in a pseudo-random way as a hash(message || nonce).
   */
-case class HKSumPowTask(k: Int, N: Int) extends KSumPowTask {
+class HKSumPowTask(k: Int, N: Int) extends KSumPowTask {
 
   private val NBigInteger: BigInteger = BigInt(N).bigInteger
 

@@ -16,7 +16,7 @@ import scala.util.{Failure, Success, Try}
   * Validation does not contain any algorithm binding, so puzzle solving
   * may be done by any algorithm.
   */
-case class NKSumPowTask(k: Int, N: Int) extends KSumPowTask {
+class NKSumPowTask(k: Int, N: Int) extends KSumPowTask {
 
   assert((k & (k - 1)) == 0, s"k should be a power of 2, $k given")
 
